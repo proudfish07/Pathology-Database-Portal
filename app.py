@@ -1,8 +1,9 @@
-from flask import Flask, request, render_template_string, redirect, url_for
+from flask import Flask, request, render_template_string, redirect, url_for, make_response
 import psycopg2
 import psycopg2.extras
 import pandas as pd
 import os
+import io
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024
@@ -278,7 +279,132 @@ def submit():
             conn.commit()
     return redirect(url_for('form'))
 
-# browse & edit 路由同前一版 MySQL，直接替換 get_conn() 及 SQL 語法即可
+@app.route('/browse', methods=['GET', 'POST'])
+def browse():
+    query = "SELECT * FROM samples ORDER BY id DESC LIMIT 100"
+    filters = []
+    values = []
+
+    if request.method == 'POST':
+        species = request.form.get('species')
+        doctor = request.form.get('doctor')
+        exam_type = request.form.get('exam_type')
+        # 可依需求增加更多欄位
+
+        if species:
+            filters.append("species = %s")
+            values.append(species)
+        if doctor:
+            filters.append("doctor = %s")
+            values.append(doctor)
+        if exam_type:
+            filters.append("exam_type = %s")
+            values.append(exam_type)
+
+        if filters:
+            query = f"SELECT * FROM samples WHERE {' AND '.join(filters)} ORDER BY id DESC LIMIT 100"
+
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(query, tuple(values))
+            results = cur.fetchall()
+            columns = [desc[0] for desc in cur.description]
+
+    # 取得下拉選單資料
+    all_species = get_all('species')
+    all_doctors = get_all('doctors')
+    all_exam_types = get_all('exam_types')
+
+    form_data = dict(request.form) if request.method == 'POST' else {}
+
+    return render_template_string('''
+        <h2>複合查詢</h2>
+        <form method="POST">
+          物種：
+          <select name="species">
+            <option value="">(全部)</option>
+            {% for s in all_species %}
+              <option value="{{s}}" {% if form_data.get('species')==s %}selected{% endif %}>{{s}}</option>
+            {% endfor %}
+          </select>
+          主治醫師：
+          <select name="doctor">
+            <option value="">(全部)</option>
+            {% for d in all_doctors %}
+              <option value="{{d}}" {% if form_data.get('doctor')==d %}selected{% endif %}>{{d}}</option>
+            {% endfor %}
+          </select>
+          檢驗類別：
+          <select name="exam_type">
+            <option value="">(全部)</option>
+            {% for e in all_exam_types %}
+              <option value="{{e}}" {% if form_data.get('exam_type')==e %}selected{% endif %}>{{e}}</option>
+            {% endfor %}
+          </select>
+          <input type="submit" value="查詢">
+        </form>
+        <form method="POST" action="/download_csv">
+          <!-- 隱藏欄位保留查詢條件 -->
+          <input type="hidden" name="species" value="{{form_data.get('species','')}}">
+          <input type="hidden" name="doctor" value="{{form_data.get('doctor','')}}">
+          <input type="hidden" name="exam_type" value="{{form_data.get('exam_type','')}}">
+          <button type="submit">下載查詢結果 (CSV)</button>
+        </form>
+        <table border="1" style="margin-top:16px;">
+          <tr>
+            {% for col in columns %}
+              <th>{{col}}</th>
+            {% endfor %}
+          </tr>
+          {% for row in results %}
+            <tr>
+              {% for item in row %}
+                <td>{{item}}</td>
+              {% endfor %}
+            </tr>
+          {% endfor %}
+        </table>
+        <br>
+        <a href="/">🏠 回首頁</a>
+    ''', results=results, columns=columns, all_species=all_species,
+         all_doctors=all_doctors, all_exam_types=all_exam_types, form_data=form_data)
+
+@app.route('/download_csv', methods=['POST'])
+def download_csv():
+    # 跟 browse 查詢條件一樣
+    query = "SELECT * FROM samples"
+    filters = []
+    values = []
+
+    species = request.form.get('species')
+    doctor = request.form.get('doctor')
+    exam_type = request.form.get('exam_type')
+
+    if species:
+        filters.append("species = %s")
+        values.append(species)
+    if doctor:
+        filters.append("doctor = %s")
+        values.append(doctor)
+    if exam_type:
+        filters.append("exam_type = %s")
+        values.append(exam_type)
+
+    if filters:
+        query += " WHERE " + " AND ".join(filters)
+    query += " ORDER BY id DESC LIMIT 100"
+
+    with get_conn() as conn:
+        df = pd.read_sql_query(query, conn, params=values)
+
+    output = io.StringIO()
+    df.to_csv(output, index=False, encoding='utf-8-sig')
+    output.seek(0)
+
+    response = make_response(output.getvalue())
+    response.headers["Content-Disposition"] = "attachment; filename=query_result.csv"
+    response.headers["Content-type"] = "text/csv; charset=utf-8-sig"
+    return response
 
 if __name__ == '__main__':
     init_db()
