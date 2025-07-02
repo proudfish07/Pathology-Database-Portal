@@ -7,24 +7,21 @@ import os
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024
 
-DB_USER = os.environ.get("DB_USER", "youruser")
-DB_PASS = os.environ.get("DB_PASS", "yourpassword")
-DB_NAME = os.environ.get("DB_NAME", "yourdb")
-DB_HOST = os.environ.get("DB_HOST", "localhost")
-DB_PORT = os.environ.get("DB_PORT", "5432")  # PostgreSQL 預設 5432
-DB_SOCKET = os.environ.get("DB_SOCKET", None)  # Cloud SQL 建議用 unix socket
+# 環境變數設置，Cloud Run 上會自動帶入
+DB_USER = os.environ.get("DB_USER", "test")
+DB_PASS = os.environ.get("DB_PASS", "test")
+DB_NAME = os.environ.get("DB_NAME", "postgres")
+DB_SOCKET = os.environ.get("DB_SOCKET", "/cloudsql/fabled-coder-463906-b3:asia-east1:my-instance")
 
 def get_conn():
-    if DB_SOCKET:  # Cloud Run → Cloud SQL unix socket
-        return psycopg2.connect(
-            dbname=DB_NAME, user=DB_USER, password=DB_PASS,
-            host=DB_SOCKET, port=DB_PORT, cursor_factory=psycopg2.extras.DictCursor
-        )
-    else:  # local TCP
-        return psycopg2.connect(
-            dbname=DB_NAME, user=DB_USER, password=DB_PASS,
-            host=DB_HOST, port=DB_PORT, cursor_factory=psycopg2.extras.DictCursor
-        )
+    # 在 Cloud Run 上只用 Unix Socket，避免用 localhost
+    return psycopg2.connect(
+        dbname=DB_NAME,
+        user=DB_USER,
+        password=DB_PASS,
+        host=DB_SOCKET,
+        cursor_factory=psycopg2.extras.DictCursor
+    )
 
 def init_db():
     with get_conn() as conn:
