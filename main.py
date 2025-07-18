@@ -1,12 +1,14 @@
+import sys
+print("\n=== main.py starting ===\n", file=sys.stderr)
 try:
     import os
     import psycopg2
     import pandas as pd
     from flask import Flask, request, render_template_string, redirect, url_for
     from werkzeug.datastructures import MultiDict
+    print("\n=== main.py import success ===\n", file=sys.stderr)
 except Exception as e:
-    import sys
-    print("IMPORT ERROR:", e, file=sys.stderr)
+    print("\nIMPORT ERROR:", e, "\n", file=sys.stderr)
     raise
 
 
@@ -23,14 +25,14 @@ DB_PASS = os.environ.get("DB_PASS", "81148169")
 def get_db_conn():
     try:
         return psycopg2.connect(
-            host=DB_HOST,
-            port=DB_PORT,
-            dbname=DB_NAME,
-            user=DB_USER,
-            password=DB_PASS
+            host=os.environ.get("DB_HOST", "127.0.0.1"),
+            port=int(os.environ.get("DB_PORT", 5432)),
+            dbname=os.environ.get("DB_NAME", "Pathology-DataBase"),
+            user=os.environ.get("DB_USER", "wildone"),
+            password=os.environ.get("DB_PASS", "81148169")
         )
     except Exception as e:
-        print("DB CONNECT ERROR:", e, file=sys.stderr)
+        print("\nDB CONNECT ERROR:", e, "\n", file=sys.stderr)
         raise
 
 def init_db():
