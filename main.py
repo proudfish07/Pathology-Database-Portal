@@ -10,12 +10,6 @@ except Exception as e:
     raise
 
 
-import os
-import psycopg2
-import pandas as pd
-from flask import Flask, request, render_template_string, redirect, url_for
-from werkzeug.datastructures import MultiDict
-
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024  # 限制上傳檔案最大2MB
 
@@ -27,13 +21,17 @@ DB_USER = os.environ.get("DB_USER", "wildone")
 DB_PASS = os.environ.get("DB_PASS", "81148169")
 
 def get_db_conn():
-    return psycopg2.connect(
-        host=DB_HOST,
-        port=DB_PORT,
-        dbname=DB_NAME,
-        user=DB_USER,
-        password=DB_PASS
-    )
+    try:
+        return psycopg2.connect(
+            host=DB_HOST,
+            port=DB_PORT,
+            dbname=DB_NAME,
+            user=DB_USER,
+            password=DB_PASS
+        )
+    except Exception as e:
+        print("DB CONNECT ERROR:", e, file=sys.stderr)
+        raise
 
 def init_db():
     with get_db_conn() as conn:
