@@ -1,3 +1,15 @@
+try:
+    import os
+    import psycopg2
+    import pandas as pd
+    from flask import Flask, request, render_template_string, redirect, url_for
+    from werkzeug.datastructures import MultiDict
+except Exception as e:
+    import sys
+    print("IMPORT ERROR:", e, file=sys.stderr)
+    raise
+
+
 import os
 import psycopg2
 import pandas as pd
