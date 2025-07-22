@@ -1,3 +1,25 @@
+@app.route('/db_status')
+def db_status():
+    import sys
+    try:
+        with get_db_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT 1")
+                # 檢查 samples 資料表是否存在
+                cur.execute("""
+                    SELECT EXISTS (
+                        SELECT FROM information_schema.tables 
+                        WHERE table_name = 'samples'
+                    )
+                """)
+                exists = cur.fetchone()[0]
+        return f"DB連線成功，samples資料表存在：{exists}"
+    except Exception as e:
+        print("DB health check error:", e, file=sys.stderr)
+        return f"DB連線失敗或資料表不存在：{e}"
+
+
+
 import os
 import psycopg2
 import pandas as pd
