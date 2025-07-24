@@ -36,7 +36,7 @@ def get_db_conn():
         port=int(os.environ.get("DB_PORT", 5432)),
         dbname=os.environ.get("DB_NAME", "Pathology-DataBase"),
         user=os.environ.get("DB_USER", "wildone"),
-        password=os.environ.get("DB_PASS", "81148169")
+        password=os.environ.get("DB_PASS", "81148165")
     )
 
 def init_db():
