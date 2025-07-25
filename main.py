@@ -314,9 +314,4 @@ def submit():
         conn.commit()
     return redirect(url_for('form'))
 
-# 其他 browse/edit 路由照原本改用 get_db_conn()，可自行對照修改
-
-if __name__ == '__main__':
-    init_db()
-    # Cloud Run 預設 port 為 8080
-    app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 8080)), debug=False)
+init_db()
