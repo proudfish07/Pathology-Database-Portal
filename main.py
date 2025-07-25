@@ -313,3 +313,10 @@ def submit():
             """, data)
         conn.commit()
     return redirect(url_for('form'))
+
+
+try:
+    init_db()
+except Exception as e:
+    import sys
+    print("❗ 資料庫初始化失敗：", e, file=sys.stderr)
