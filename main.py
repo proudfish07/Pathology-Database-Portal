@@ -313,5 +313,3 @@ def submit():
             """, data)
         conn.commit()
     return redirect(url_for('form'))
-
-init_db()
