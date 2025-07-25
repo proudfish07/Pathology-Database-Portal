@@ -16,7 +16,7 @@ def db_status():
         return f"DB連線成功，samples資料表存在：{exists}"
     except Exception as e:
         print("DB health check error:", e, file=sys.stderr)
-        return f"DB連線失敗或資料表不存在：{e}"
+        return f"DB連線失敗或資料表不存在：{e}", 500
 
 
 
